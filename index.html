@@ -98,11 +98,35 @@ body{font-family:'Nunito',sans-serif;background:linear-gradient(135deg,#ffe4ec 0
 /* 黄牙动画（不刷牙） */
 .yellow-tooth{position:absolute;right:40px;top:50%;transform:translateY(-50%)}
 
-/* 吉祥物 */
-.mascot-float{animation:mascotFloat 3s ease-in-out infinite}
-@keyframes mascotFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-.mascot-bounce{animation:mascotBounce .5s ease}
-@keyframes mascotBounce{0%{transform:scale(1)}30%{transform:scale(1.3)}60%{transform:scale(.9)}100%{transform:scale(1)}}
+/* 吉祥物：摸鱼 */
+.mascot-float{animation:fishSwimIdle 3s ease-in-out infinite}
+@keyframes fishSwimIdle{
+  0%,100%{transform:translateX(0) translateY(0) rotate(0deg)}
+  25%{transform:translateX(8px) translateY(-6px) rotate(3deg)}
+  50%{transform:translateX(0) translateY(-12px) rotate(0deg)}
+  75%{transform:translateX(-8px) translateY(-6px) rotate(-3deg)}
+}
+.mascot-bounce{animation:fishBounce .6s ease}
+@keyframes fishBounce{
+  0%{transform:scale(1) rotate(0)}
+  20%{transform:scale(1.3) rotate(10deg)}
+  40%{transform:scale(.85) rotate(-8deg)}
+  60%{transform:scale(1.15) rotate(5deg)}
+  80%{transform:scale(.95) rotate(-2deg)}
+  100%{transform:scale(1) rotate(0)}
+}
+/* 鱼被摸时扭动 */
+.fish-tail-wag{animation:tailWag .4s ease-in-out 2}
+@keyframes tailWag{0%,100%{transform:rotate(0)}25%{transform:rotate(8deg)}75%{transform:rotate(-8deg)}}
+/* 摸鱼时的水花 */
+.fish-splash{position:absolute;pointer-events:none;font-size:1.2rem;animation:splashUp .8s ease-out forwards;opacity:0}
+@keyframes splashUp{0%{transform:translateY(0) scale(.5);opacity:1}100%{transform:translateY(-50px) scale(1.2);opacity:0}}
+/* 鱼吐泡泡（常驻） */
+.fish-bubble{position:absolute;pointer-events:none;font-size:.7rem;animation:fishBubbleUp 2.5s ease-out infinite;opacity:0}
+@keyframes fishBubbleUp{0%{transform:translateY(0) scale(.4);opacity:0}10%{opacity:.7}100%{transform:translateY(-60px) scale(1);opacity:0}}
+/* 水波纹 */
+.water-ripple{position:absolute;border:2px solid rgba(96,165,250,.4);border-radius:50%;pointer-events:none;animation:rippleOut .8s ease-out forwards}
+@keyframes rippleOut{0%{width:0;height:0;opacity:.8}100%{width:80px;height:80px;opacity:0;margin-left:-40px;margin-top:-40px}}
 
 /* 五彩纸屑 */
 .confetti{position:fixed;top:-10px;border-radius:2px;animation:confettiFall linear forwards;z-index:9999;pointer-events:none}
@@ -172,12 +196,23 @@ body{font-family:'Nunito',sans-serif;background:linear-gradient(135deg,#ffe4ec 0
 
   <!-- 左栏 -->
   <div class="lg:col-span-1 space-y-5">
-    <!-- 吉祥物 -->
-    <div class="glass rounded-3xl p-5 shadow-lg text-center">
-      <div class="mascot-float text-7xl mb-3 cursor-pointer select-none" id="mascot" onclick="petMascot()">🐼</div>
-      <h3 class="text-lg font-bold text-gray-800">熊猫君</h3>
-      <p class="text-gray-500 text-sm mt-1 mb-3 min-h-[40px]" id="mascotMsg">今天要努力完成任务哦！</p>
-      <div class="text-xs text-pink-400" id="petInfo">点击熊猫抚摸它 💕</div>
+    <!-- 吉祥物：摸鱼 -->
+    <div class="glass rounded-3xl p-5 shadow-lg text-center relative overflow-hidden">
+      <!-- 水面背景 -->
+      <div class="absolute inset-0 bg-gradient-to-b from-blue-50/0 via-blue-50/30 to-blue-100/50 pointer-events-none"></div>
+      <!-- 常驻泡泡 -->
+      <div class="fish-bubble" style="left:25%;top:40%;animation-delay:0s">🫧</div>
+      <div class="fish-bubble" style="left:65%;top:50%;animation-delay:1s">🫧</div>
+      <div class="fish-bubble" style="left:45%;top:35%;animation-delay:1.8s">🫧</div>
+      <!-- 水花容器 -->
+      <div id="splashZone" class="absolute inset-0 pointer-events-none"></div>
+      <!-- 鱼本体 -->
+      <div class="relative z-10">
+        <div class="mascot-float text-7xl mb-3 cursor-pointer select-none" id="mascot" onclick="petMascot()">🐟</div>
+        <h3 class="text-lg font-bold text-gray-800">摸鱼君</h3>
+        <p class="text-gray-500 text-sm mt-1 mb-3 min-h-[40px]" id="mascotMsg">工作摸鱼两不误！</p>
+        <div class="text-xs text-blue-400" id="petInfo">点击摸鱼 🐟</div>
+      </div>
     </div>
     <!-- 统计 -->
     <div class="glass rounded-3xl p-5 shadow-lg">
@@ -497,29 +532,80 @@ function updStats() {
   document.getElementById('statusTitle').textContent=st.t;
   document.getElementById('statusMessage').textContent=st.m;
 
-  // 吉祥物
-  const ms = rt>=1?['哇！你今天太棒了！👑','全部完成了！你是人间精品！']
-           : rt>=.7?['表现很不错哦！继续加油！','差一点点就是圣人了！']
-           : rt>=.5?['今天过得还不错呢～','你还在进步中！']
-           : rt>=.3?['慢慢来不着急','明天会更好的！']
-           : rt>0  ?['至少你开始了！','万里之行始于足下']
-                   :['今天要努力完成任务哦！','皇上，朝臣们都等急了'];
+  // 摸鱼君消息
+  const ms = rt>=1?['哇！全部完成了！鱼都佩服你！🐟','今天不用摸鱼了，你是正经人！']
+           : rt>=.7?['表现很不错哦！摸鱼之余也在努力','差一点就不需要摸鱼了！']
+           : rt>=.5?['半摸鱼半干活，平衡大师','你还在进步中！鱼在等你']
+           : rt>=.3?['摸鱼的一天，很正常','明天少摸点鱼？算了不可能']
+           : rt>0  ?['至少你开始了！鱼在鼓掌','万里摸鱼始于足下']
+                   :['工作摸鱼两不误！','快开始！鱼都等不及了'];
   document.getElementById('mascotMsg').textContent=ms[~~(Math.random()*ms.length)];
 
   const cel=document.getElementById('celebMsg');
   rt===1&&tt>0 ? cel.classList.remove('hidden') : cel.classList.add('hidden');
 }
 
-// ===================== 吉祥物 =====================
+// ===================== 摸鱼吉祥物 =====================
 function petMascot() {
   petCnt++;
   const p=getProf(); p.petCount=petCnt; saveProf(p);
+
   const el=document.getElementById('mascot');
-  el.classList.remove('mascot-float'); el.classList.add('mascot-bounce');
-  setTimeout(()=>{el.classList.remove('mascot-bounce');el.classList.add('mascot-float')},500);
-  const ms=['好开心！再摸摸我！','哇，好舒服～','请继续！','嘿嘿，痒痒的','你的手好温暖','别停下来！','我是最幸福的熊猫！','你摸了我'+petCnt+'次啦！'];
+  // 鱼蹦跶动画
+  el.classList.remove('mascot-float');
+  el.classList.add('mascot-bounce');
+  setTimeout(()=>{el.classList.remove('mascot-bounce');el.classList.add('mascot-float')},600);
+
+  // 尾巴摇摆
+  setTimeout(()=>{el.classList.add('fish-tail-wag');setTimeout(()=>el.classList.remove('fish-tail-wag'),1000)},100);
+
+  // 生成水花
+  const zone=document.getElementById('splashZone');
+  const splashEmojis=['💦','🫧','💧','🐟','✨'];
+  for(let i=0;i<4;i++){
+    const sp=document.createElement('span');
+    sp.className='fish-splash';
+    sp.textContent=splashEmojis[~~(Math.random()*splashEmojis.length)];
+    sp.style.left=(20+Math.random()*60)+'%';
+    sp.style.top=(30+Math.random()*40)+'%';
+    sp.style.animationDelay=(i*0.1)+'s';
+    zone.appendChild(sp);
+    setTimeout(()=>sp.remove(),1000);
+  }
+
+  // 水波纹
+  const ripple=document.createElement('div');
+  ripple.className='water-ripple';
+  ripple.style.left='50%';ripple.style.top='40%';
+  zone.appendChild(ripple);
+  setTimeout(()=>ripple.remove(),900);
+
+  // 摸鱼语录
+  const ms=[
+    '别摸了，我要游走了！',
+    '摸鱼使人快乐！🐟',
+    '你今天的摸鱼配额用完了...才怪',
+    '老板来了！快松手！',
+    '鱼：被摸了 '+petCnt+' 次，考虑报警',
+    '专业摸鱼，持证上岗',
+    '摸鱼一时爽，一直摸一直爽',
+    '你的摸鱼技术日渐精进',
+    '这条鱼已经被你摸秃了',
+    '咸鱼翻身还是咸鱼！',
+    '今日摸鱼配额：无上限',
+    '鱼都被你摸熟了...',
+    '(扭动)(扭动)(扭动)',
+    '再摸就变成烤鱼了！🔥',
+  ];
   document.getElementById('mascotMsg').textContent=ms[~~(Math.random()*ms.length)];
-  document.getElementById('petInfo').textContent=`已被抚摸 ${petCnt} 次 💕`;
+  document.getElementById('petInfo').textContent=`已摸鱼 ${petCnt} 次 🐟`;
+
+  // 特殊里程碑
+  if(petCnt===10) document.getElementById('mascotMsg').textContent='摸鱼10次！授予「初级摸鱼师」称号';
+  if(petCnt===50) document.getElementById('mascotMsg').textContent='摸鱼50次！升级为「高级摸鱼师」🏆';
+  if(petCnt===100) document.getElementById('mascotMsg').textContent='摸鱼100次！！你已成为「摸鱼之神」👑';
+  if(petCnt===200) document.getElementById('mascotMsg').textContent='200次...这条鱼已经变透明了 👻';
+
   confetti(8);
 }
 
